@@ -5,7 +5,7 @@
 ### *Peel back the layers. Understand the code.*
 ### *逐层剖析，读懂代码背后的真正逻辑。*
 
-[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-6%20Skills-blueviolet?logo=anthropic&logoColor=white)](https://claude.ai/code)
+[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-9%20Skills-blueviolet?logo=anthropic&logoColor=white)](https://claude.ai/code)
 [![Stars](https://img.shields.io/github/stars/noxinsun-source/RepoStrata?style=social)](https://github.com/noxinsun-source/RepoStrata)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-Compatible-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md)
@@ -30,7 +30,10 @@
 | **Inno Scan** | `/inno-scan` | Maps paper claims → exact code functions via targeted grep, never reads boilerplate | ~6k tokens |
 | **Code Explain** | `/code-explain` | L3 flowchart + L4 line-by-line decision table for ONE function | ~7k tokens |
 | **Repo Compare** | `/repo-compare` | Side-by-side comparison of two repos solving the same problem | ~8k tokens |
-| **Merge Analysis** | `/merge-analysis` | 🆕 Merges partial scans (for Large/Huge repos) into one final report | ~5k tokens |
+| **Merge Analysis** | `/merge-analysis` | Merges partial scans (for Large/Huge repos) into one final report | ~5k tokens |
+| **Call Graph** | `/repo-callgraph` | 🆕 AST-based call graph with real parameter types on edges. Generates classDiagram + dependency graph | ~8k tokens |
+| **Interfaces** | `/repo-interfaces` | 🆕 Extracts all data contracts: ABC, Protocol, Pydantic, dataclass, TypedDict. Shows field types + constraints | ~8k tokens |
+| **Data Flow** | `/data-flow` | 🆕 Traces data shape transformations across the full pipeline. Generates Sequence Diagram + type transformation table | ~9k tokens |
 
 Each skill is **independently usable** and **context-efficient** — designed to handle repos of any size without hitting LLM context limits.
 
@@ -185,18 +188,15 @@ RepoStrata/
 ├── LICENSE
 │
 ├── skills/
-│   ├── repo-preflight/
-│   │   └── SKILL.md          ← /repo-preflight  ★ start here
-│   ├── repo-map/
-│   │   └── SKILL.md          ← /repo-map
-│   ├── inno-scan/
-│   │   └── SKILL.md          ← /inno-scan  ★ core
-│   ├── code-explain/
-│   │   └── SKILL.md          ← /code-explain
-│   ├── repo-compare/
-│   │   └── SKILL.md          ← /repo-compare
-│   └── merge-analysis/
-│       └── SKILL.md          ← /merge-analysis  (for Large/Huge repos)
+│   ├── repo-preflight/       ← /repo-preflight  ★ always start here
+│   ├── repo-map/             ← /repo-map         L1 architecture
+│   ├── repo-callgraph/       ← /repo-callgraph   L2 call graph + param types (AST)
+│   ├── repo-interfaces/      ← /repo-interfaces  data contracts (ABC/Pydantic/dataclass)
+│   ├── data-flow/            ← /data-flow        pipeline sequence + type transforms
+│   ├── inno-scan/            ← /inno-scan        ★ innovation localization
+│   ├── code-explain/         ← /code-explain     L3+L4 single function deep dive
+│   ├── repo-compare/         ← /repo-compare     two-repo comparison
+│   └── merge-analysis/       ← /merge-analysis   merge partial scans
 │
 ├── references/
 │   ├── BOILERPLATE_PATTERNS.md   ← What to skip (train/eval/logger/etc.)
