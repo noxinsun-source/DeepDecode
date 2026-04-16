@@ -1,297 +1,313 @@
 ---
 name: full-analysis
-description: One-command orchestrator that runs the full RepoStrata pipeline automatically. Detects repo size, selects the right strategy, executes all relevant skills in order, saves checkpoints to vault, and produces a consolidated final report. Use when user invokes /full-analysis.
+description: One-command orchestrator. Runs the full RepoStrata pipeline — size check, architecture, call graph, data flow, paper discovery + innovation localization, deep L3+L4 function analysis, and final report. All in one command. Use when user invokes /full-analysis.
 ---
 
 # /full-analysis — 全流程一键编排
 
-**定位**：RepoStrata 的总指挥。一条命令启动完整分析 pipeline，
-自动检测规模、选择策略、按序执行所有相关 Skill、保存中间结果、输出最终报告。
-
-你不需要手动决定"先跑哪个 Skill"——`/full-analysis` 替你做所有决策。
+**定位**：RepoStrata 的总指挥。一条命令启动完整分析 pipeline。  
+内置**仓库规模评估**（原 preflight）和**结果合并**（原 merge-analysis），无需单独调用。
 
 ---
 
 ## VAULT PATH MAPPING
 
 - 检查点目录：`03.资料库/代码分析/[repo名]/`
-  - `00-preflight.md`：体检报告 + 任务计划
-  - `01-architecture.md`：L1 架构图
-  - `02-callgraph.md`：调用图 + 类层次
-  - `03-interfaces.md`：接口与数据契约
-  - `04-dataflow.md`：数据流转图
-  - `05-innoscan.md`：创新点定位
-  - `06-[funcname]-explain.md`：核心函数深度解析（每个函数一个文件）
-  - `FINAL-report.md`：最终综合报告
+  - `01-architecture.md`：L1 文件树 + 职责摘要
+  - `02-callgraph.md`：L2 调用图 + 接口契约（合并）
+  - `03-dataflow.md`：数据流转图
+  - `04-innoscan.md`：论文发现 + 创新点定位
+  - `05-[funcname]-explain.md`：核心函数 L3+L4（每函数一文件）
+  - `REPORT.md`：最终综合报告
 
 ---
 
 ## 调用格式
 
 ```
-# 标准用法（推荐）
-/full-analysis https://github.com/user/repo --paper https://arxiv.org/abs/xxxx
-
-# 无论文（自动从 README 检测）
+# 标准用法（推荐，自动搜索论文）
 /full-analysis https://github.com/user/repo
 
-# 快速模式（只做架构 + 创新点，跳过深度解析）
-/full-analysis https://github.com/user/repo --paper [URL] --mode quick
+# 指定论文（跳过搜索步骤）
+/full-analysis https://github.com/user/repo --paper https://arxiv.org/abs/xxxx
 
-# 深度模式（包含每个创新函数的完整 L4 分析）
-/full-analysis https://github.com/user/repo --paper [URL] --mode deep
+# 用户本地 PDF（搜不到论文时上传）
+/full-analysis https://github.com/user/repo --paper /path/to/paper.pdf
 
-# 本地仓库
-/full-analysis /local/path --paper [URL]
+# 快速模式（架构 + 创新点，跳过 L3+L4 深度解析）
+/full-analysis https://github.com/user/repo --mode quick
 
-# 断点续跑（从上次中断处继续）
+# 深度模式（全部 L3+L4，最完整）
+/full-analysis https://github.com/user/repo --mode deep
+
+# 断点续跑
 /full-analysis https://github.com/user/repo --resume
 ```
 
 ---
 
-## PIPELINE 架构
+## PIPELINE 总览
 
 ```
 /full-analysis
 │
-├── Phase 0: PREFLIGHT（总是执行，< 3k tokens）
-│   └── /repo-preflight → 体检 + 分级 + 任务计划
-│       → 保存：03.资料库/代码分析/[repo名]/00-preflight.md
+├── Step 0: TRIAGE（内置，< 30 秒）
+│   ├── 统计文件数 / 行数 → 分级（Nano/Small/Medium/Large/Huge）
+│   ├── 确定执行策略（单批 or 分批）
+│   └── 检查断点文件（--resume 时跳过已完成阶段）
 │
-├── Phase 1: ARCHITECTURE（总是执行）
-│   ├── /repo-map → 文件树 + 职责摘要
-│   ├── /repo-callgraph → AST 调用图 + 类层次 + 参数类型
-│   └── /repo-interfaces → 接口契约 + 数据模型
-│       → 保存：01-architecture.md + 02-callgraph.md + 03-interfaces.md
+├── Step 1: ARCHITECTURE（总是执行）
+│   ├── 文件树 + 职责摘要（L1）          → 01-architecture.md
+│   └── 调用图 + 接口契约（L2）          → 02-callgraph.md
 │
-├── Phase 2: DATA FLOW（标准/深度模式）
-│   └── /data-flow → Pipeline 序列图 + 数据变换表
-│       → 保存：04-dataflow.md
+├── Step 2: DATA FLOW（Standard/Deep 模式）
+│   └── Pipeline 序列图 + 数据变换表    → 03-dataflow.md
 │
-├── Phase 3: INNOVATION SCAN（有论文时执行）
-│   └── /inno-scan → 论文创新点 → 代码函数映射
-│       → [Large/Huge repos] 自动分批，每批保存 partial 文件
-│       → 保存：05-innoscan.md
+├── Step 3: INNOVATION SCAN（总是执行）
+│   ├── 论文自动发现（三级降级）
+│   ├── 创新点 → 代码函数映射
+│   └── Large/Huge：自动分批，完成后内联合并  → 04-innoscan.md
 │
-├── Phase 4: DEEP DIVE（深度模式 / 用户确认后）
-│   └── /code-explain × N → 每个核心创新函数的 L3+L4 分析
-│       → 保存：06-[funcname]-explain.md
+├── Step 4: DEEP DIVE（Deep 模式 / 用户确认）
+│   └── 每个核心函数：L3 流程图 + L4 逐行对照表  → 05-[func]-explain.md
 │
-└── Phase 5: SYNTHESIS（总是执行）
-    └── /merge-analysis（若有 partial）
-    └── 生成 FINAL-report.md
+└── Step 5: SYNTHESIS（总是执行）
+    └── 读取所有检查点，生成 REPORT.md
 ```
 
 ---
 
-## WORKFLOW（详细步骤）
+## WORKFLOW 详细步骤
 
-### Step 0：检查断点续跑
+### Step 0：Triage（内置规模评估）
 
+```bash
+# 克隆仓库（仅元数据，不下载 blob）
+git clone --depth=1 --filter=blob:none \
+  [REPO_URL] /tmp/repostrata-[repo名]/
+
+# 统计 Python 文件
+find /tmp/repostrata-[repo名]/ -name "*.py" \
+  ! -path "*/__pycache__/*" ! -path "*/test*" \
+  ! -path "*/example*" | wc -l
+
+# 统计总行数
+find /tmp/repostrata-[repo名]/ -name "*.py" \
+  ! -path "*/__pycache__/*" \
+  | xargs wc -l | tail -1
+```
+
+**分级标准与策略**：
+
+| 级别 | Python 文件数 | 总行数 | 策略 |
+|------|------------|--------|------|
+| 🟢 Nano | ≤ 15 | ≤ 2k | 全量读取，所有 Phase 单批完成 |
+| 🔵 Small | 16–50 | 2k–10k | 全量读取，Phase 4 仅分析前 5 个创新函数 |
+| 🟡 Medium | 51–200 | 10k–50k | Grep-only 模式，按模块分批 Phase 3-4 |
+| 🟠 Large | 201–500 | 50k–150k | Phase 1 全量；Phase 3-4 只读创新文件 |
+| 🔴 Huge | 500+ | 150k+ | Phase 1 仅文件树；Phase 3-4 纯关键词制导 |
+
+**断点检查**（`--resume` 时执行）：
 ```
 检查 03.资料库/代码分析/[repo名]/ 是否存在
-若存在：
-  列出已完成的阶段（哪些文件已存在）
-  询问用户：从头开始 / 继续未完成的阶段？
-若不存在：
-  创建目录，开始全新分析
+若存在：列出已完成阶段 → 跳过，从未完成处继续
+若不存在：创建目录，开始全新分析
 ```
 
-### Step 1：Phase 0 — Preflight
+---
 
-执行 `/repo-preflight` 的完整 workflow，保存结果。
+### Step 1：Architecture
 
-关键输出：
-- 仓库级别（Nano / Small / Medium / Large / Huge）
-- 模块列表 + 每模块行数
-- 是否需要分批（Large/Huge）
-- 推荐执行的 Skill 组合
+**1a. 文件树（L1）**
 
-根据级别设置后续策略：
+生成带职责标注的文件树，区分：
+- 🔥 `[CORE]` — 根据文件名/结构推断的核心逻辑
+- 📦 `[INFRA]` — 存储、配置、模型加载等基础设施
+- ⚙️ `[BOILERPLATE]` — 训练循环、评估、日志、入口脚本
 
 ```
-Nano / Small  → 单批执行所有 Phase
-Medium        → Phase 1-2 全量，Phase 3-4 Grep-only 模式
-Large         → Phase 1 全量，Phase 3 分模块批次执行
-Huge          → Phase 1 仅文件树，Phase 3 纯关键词制导
+src/
+  LinearRAG.py    🔥 [CORE] 主算法实现
+  ner.py          🔥 [CORE] 实体抽取（无LLM）
+  embedding_store.py  📦 [INFRA] 向量持久化
+  config.py       📦 [INFRA] 超参数
+  utils.py        ⚙️  [BOILERPLATE] LLM封装/日志
+  evaluate.py     ⚙️  [BOILERPLATE] 评估指标
 ```
 
-### Step 2：Phase 1 — Architecture（并行执行）
+**1b. 调用图 + 接口契约（L2，合并）**
 
-同时执行三个独立分析（它们不互相依赖）：
+使用 Python AST 静态分析（`ast` 标准库，无需安装额外依赖）：
 
-**2a. /repo-map**
-- 生成文件树 + 职责摘要
-- 识别入口文件
-- 输出：`01-architecture.md`（L1 部分）
-
-**2b. /repo-callgraph**
-- AST 提取函数签名 + 调用关系
-- 生成 Mermaid classDiagram + 调用图
-- 输出：追加到 `01-architecture.md`（L2 部分）+ `02-callgraph.md`
-
-**2c. /repo-interfaces**
-- 提取 ABC / Protocol / Pydantic / dataclass
-- 生成接口契约文档
-- 输出：`03-interfaces.md`
-
-> **进度汇报**：Phase 1 完成后，向用户展示架构摘要，询问是否继续。
-
-### Step 3：Phase 2 — Data Flow
-
-执行 `/data-flow`：
-- 以入口函数（从 Phase 1 识别）为起点
-- 追踪数据变换链
-- 生成 Sequence Diagram + Flowchart
-- 输出：`04-dataflow.md`
-
-### Step 4：Phase 3 — Innovation Scan
-
-**若提供了论文 URL**：
-执行 `/inno-scan`：
-- 读取论文 Contributions
-- Grep 定位创新函数
-- 建立论文-代码映射表
-
-**若为 Large/Huge 级**：
-- 自动分批（每批一个顶层模块）
-- 每批结果保存为 `05-innoscan-partial-N.md`
-- 全部完成后合并
-
-**若无论文**：
-- 跳过 inno-scan
-- 基于 callgraph 中调用频率 + 文件名启发式识别候选核心函数
-- 标注置信度为"推断"
-
-输出：`05-innoscan.md`
-
-> **进度汇报**：展示映射总表，询问用户：
-> "发现 N 个核心函数，是否对全部进行 L3+L4 深度解析？（预计 token 消耗：~Xk）"
-
-### Step 5：Phase 4 — Deep Dive（需用户确认）
-
-对 Phase 3 找到的每个核心创新函数，执行 `/code-explain`：
-
-```
-核心函数 1: knowledge_curation.py::QuestionAsker.ask
-  → L3 Mermaid 流程图
-  → L4 逐行任务-代码对照表（含论文出处）
-  → 保存：06-QuestionAsker-ask-explain.md
-
-核心函数 2: article_generation.py::OutlineGenerator.generate
-  → ...
-  → 保存：06-OutlineGenerator-generate-explain.md
+```python
+# 提取信息：
+# 1. 函数签名：名称、参数名、类型注解、返回类型、默认值
+# 2. 调用关系：函数 A 内部调用了哪些函数
+# 3. 接口定义：dataclass、ABC、Protocol、Pydantic BaseModel
 ```
 
-每个函数独立保存，支持随时中断、后续补充。
+输出 Mermaid classDiagram（同时体现继承关系和调用关系）：
 
-### Step 6：Phase 5 — Synthesis（最终报告）
-
-读取所有已生成的检查点文件，生成综合报告：
-
-输出：`03.资料库/代码分析/[repo名]/FINAL-report.md`
-
----
-
-## FINAL REPORT FORMAT
-
-```markdown
----
-date: YYYY-MM-DD
-repo: [URL]
-paper: [URL]
-tags: [source/code-analysis]
-skill: full-analysis
-mode: deep / quick / standard
-tier: Small / Medium / Large
-total_tokens_used: ~XXX,XXX
----
-
-# 🪨 完整代码分析报告：[repo-name]
-
-> **论文**：[标题](arXiv) | **GitHub**：[URL]  
-> **分析模式**：[模式] | **仓库级别**：[级别] | **分析时间**：YYYY-MM-DD
-
----
-
-## 📋 一句话总结
-
-[从论文 Abstract + 代码 README 综合提炼的一句话，说明这个系统"做什么、怎么做"]
-
----
-
-## 🗺️ 阶段导航
-
-| 阶段 | 文件 | 状态 |
-|------|------|------|
-| 架构概览 | [[00-preflight]] [[01-architecture]] | ✅ |
-| 调用图 | [[02-callgraph]] | ✅ |
-| 接口契约 | [[03-interfaces]] | ✅ |
-| 数据流转 | [[04-dataflow]] | ✅ |
-| 创新点定位 | [[05-innoscan]] | ✅ |
-| 核心函数解析 | [[06-*-explain]] × N | ✅ |
-
----
-
-## 🎯 核心发现
-
-### 论文-代码创新点映射
-
-[复制自 05-innoscan.md 的映射总表]
-
-> 读懂这 N 个函数 = 读懂这篇论文 80% 的技术贡献
-
-### 架构关键洞察
-
-[3-5 条关于架构设计的核心观察]
-
-### 数据流关键节点
-
-[Pipeline 中最重要的 2-3 个数据变换点]
-
----
-
-## 📊 分析统计
-
-| 指标 | 数值 |
-|------|------|
-| 源文件数 | XX 个 |
-| 总代码行数 | ~XX,XXX 行 |
-| 识别的核心创新函数 | N 个 |
-| 深度解析的函数 | N 个 |
-| 套路代码跳过比例 | ~XX% |
-| 总 token 消耗 | ~XXX,XXX |
-
----
-
-## 🗺️ 建议阅读顺序
-
-[具体的代码阅读路径，从哪个文件的哪个函数开始]
-
-## ❓ 延伸问题
-
-[3-5 个面向用户科研方向的追问]
+```mermaid
+classDiagram
+    class LinearRAG {
+        +config: LinearRAGConfig
+        +graph: ig.Graph
+        +index(passages: List[str]) void
+        +retrieve(questions: List[dict]) List[dict]
+        +calculate_entity_scores(seed_entities, ...) tuple
+    }
+    class SpacyNER {
+        +spacy_model: Language
+        +batch_ner(hash_id_to_passage: dict, max_workers: int) tuple
+        +question_ner(question: str) set
+    }
+    LinearRAG --> SpacyNER : uses
+    LinearRAG --> EmbeddingStore : uses ×3
 ```
+
+---
+
+### Step 2：Data Flow
+
+以入口函数为起点，追踪数据从输入到输出的完整变换链：
+
+- 生成 Mermaid Sequence Diagram（模块间交互时序）
+- 生成数据变换表（每一跳的数据形状变化）
+
+```
+输入: passages: List[str]
+  ↓ EmbeddingStore.insert_text()
+  → hash_id → embedding (np.ndarray[768])
+  ↓ SpacyNER.batch_ner()
+  → {hash_id: [entity_str, ...], sentence: [entity_str, ...]}
+  ↓ extract_nodes_and_edges()
+  → entity_nodes: Set[str], sentence_nodes: Set[str]
+  ↓ add_edges()
+  → ig.Graph（三层节点 + 两类边）
+```
+
+---
+
+### Step 3：Innovation Scan（含论文自动发现）
+
+**论文发现（三级降级策略）**：
+
+**级别 1：README 扫描**
+```bash
+# 从 README.md 中提取论文链接
+grep -oP 'https?://arxiv\.org/(abs|pdf)/[\d\.]+|https?://aclanthology\.org/\S+|https?://openreview\.net/forum\?id=\S+' \
+  /tmp/repostrata-[repo名]/README.md | head -3
+```
+
+若找到 → 使用该 URL，跳至论文获取
+
+**级别 2：WebSearch 搜索**（级别 1 失败时）
+```
+搜索查询（按优先级）：
+1. site:arxiv.org "[repo名]"
+2. "[repo名] [作者/组织名] arxiv paper"
+3. "[repo名] ICLR OR NeurIPS OR ACL OR EMNLP 2024 OR 2025"
+```
+
+若找到可信的 arXiv 链接 → 使用，并告知用户"自动搜索到论文：[标题]"
+
+**级别 3：用户提供 / 无论文**
+- 用户已通过 `--paper` 提供 URL 或 PDF 路径 → 直接使用
+- 用户提供 PDF 路径 → `Read` 工具读取
+- 找不到任何论文 → **Code-Only 模式**（见下）
+
+**论文获取格式**：
+```
+arXiv URL → 优先获取 HTML 版（内容更全）：
+  https://arxiv.org/abs/2510.10114
+  → 尝试: https://arxiv.org/html/2510.10114
+  → 备用: WebFetch abstract 页面
+
+ACL Anthology → 直接 WebFetch 论文页面
+OpenReview → 直接 WebFetch（含 reviews）
+本地 PDF → Read 工具直接读取
+```
+
+**Code-Only 模式**（无任何论文时）：
+```
+基于以下启发式识别"创新候选函数"：
+1. 函数名中含有算法性词汇（calculate, compute, propagate, encode, rank, score）
+2. 被多处调用（高入度）
+3. 函数体非标准库调用（含自定义循环/矩阵操作/图操作）
+4. 文件名不匹配 boilerplate 模式
+
+所有映射标注置信度为"推断（无论文）"
+```
+
+**创新定位**（有论文时）：
+1. 提取 Abstract + Contributions + Method 章节标题
+2. 构建关键词列表（每条创新声明 3–7 个关键词）
+3. Grep 搜索（仅非 boilerplate 文件）
+4. 读取命中函数片段（每个 ~50 行）
+5. 评分 → 建立论文-代码映射表
+
+**Large/Huge 分批合并**：
+```
+按顶层模块分批：每批处理一个子目录
+批次结果临时存储在内存（不写中间文件）
+全部完成后 → 内联合并 → 写入 04-innoscan.md
+```
+
+---
+
+### Step 4：Deep Dive（需用户确认）
+
+```
+发现 N 个核心函数，是否进行 L3+L4 深度解析？
+预计额外消耗：~7k tokens × N 个函数
+[Y/N/选择性（输入函数序号）]
+```
+
+对每个确认的函数：
+
+**L3：算法流程图（Mermaid flowchart）**
+- 🔥 节点：论文声称的创新操作
+- `standard` 节点：标准库调用
+
+**L4：逐行任务-代码对照表**
+
+| 代码行/表达式 | 解决的子问题 | 为什么这样写（反事实） | 论文出处 |
+|-------------|------------|---------------------|---------|
+| `np.dot(sent_emb, q_emb)` | 计算句子-问题相关度 | 余弦相似度比 BM25 泛化好；比 LLM re-rank 快 4 个数量级 | Sec 3.2.1 |
+
+---
+
+### Step 5：Synthesis
+
+读取所有检查点文件 → 生成 `REPORT.md`：
+
+- 论文-代码映射总表（来自 Step 3）
+- 架构关键洞察（来自 Step 1）
+- 数据流关键节点（来自 Step 2）
+- 建议阅读顺序（从哪个函数开始）
+- 面向用户科研方向的延伸问题
 
 ---
 
 ## 模式对比
 
-| 模式 | 执行的 Phase | 适用场景 | 预计 token | 预计时间 |
-|------|------------|---------|-----------|---------|
-| `--mode quick` | 0 + 1 + 3 | 快速了解创新点，不需要深度 | ~30k | 5 分钟 |
-| `--mode standard`（默认）| 0 + 1 + 2 + 3 | 平衡深度与效率 | ~60k | 10 分钟 |
-| `--mode deep` | 0 + 1 + 2 + 3 + 4 | 完全读懂，准备复现或借鉴 | ~120k+ | 20-30 分钟 |
+| 模式 | 执行步骤 | 适用场景 | 预计 token |
+|------|---------|---------|-----------|
+| `--mode quick` | 0 + 1 + 3 | 快速了解创新点 | ~25k |
+| `--mode standard`（默认）| 0 + 1 + 2 + 3 + 5 | 平衡深度与效率 | ~50k |
+| `--mode deep` | 全部 0–5 | 完全读懂，准备复现 | ~100k+ |
 
 ---
 
-## 断点续跑机制
+## 进度汇报节点
 
-每个 Phase 完成后立即保存检查点文件。
-若分析中途中断（网络、context 限制等），重新运行 `/full-analysis --resume` 会：
-1. 读取已存在的检查点文件
-2. 跳过已完成的阶段
-3. 从上次中断的 Phase 继续
-
-这对 Large/Huge 级仓库尤其重要（可能需要多个会话才能完成）。
+每个 Step 完成后输出一行汇报：
+```
+✅ Step 0 完成：LinearRAG — Nano 级（6文件/1078行），单批执行
+✅ Step 1 完成：识别到 2 个🔥核心文件，4 个⚙️套路文件
+✅ Step 2 完成：数据流 5 跳，关键变换节点在 calculate_entity_scores()
+✅ Step 3 完成：自动找到论文 [LinearRAG ICLR'26]，定位 5 个创新函数
+❓ Step 4：发现 5 个核心函数，是否进行深度 L3+L4 解析？[Y/n]
+✅ Step 5 完成：报告已保存至 03.资料库/代码分析/LinearRAG/REPORT.md
+```

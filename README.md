@@ -5,7 +5,7 @@
 ### *Peel back the layers. Understand the code.*
 ### *逐层剖析，读懂代码背后的真正逻辑。*
 
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-10%20Skills-blueviolet?logo=anthropic&logoColor=white)](https://claude.ai/code)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-7%20Skills-blueviolet?logo=anthropic&logoColor=white)](https://claude.ai/code)
 [![Stars](https://img.shields.io/github/stars/noxinsun-source/RepoStrata?style=social)](https://github.com/noxinsun-source/RepoStrata)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-Ready-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md)
@@ -13,8 +13,9 @@
 
 **English** · [中文](#-中文说明)
 
-> A suite of **10 Claude Code skills** that decompose any GitHub repository into layered understanding —  
+> A suite of **7 Claude Code skills** that decompose any GitHub repository into layered understanding —  
 > from high-level architecture down to why each line of code exists.  
+> Auto-discovers the paper, auto-locates innovation code, generates L4 line-by-line task↔code tables.  
 >
 > **One command. Full pipeline. Any repo size.**
 
@@ -57,97 +58,81 @@ Most people read papers and then struggle to connect them to code. RepoStrata br
 
 ---
 
-## 🧩 The 10 Skills
+## 🧩 The 7 Skills
 
-### 🚀 Orchestrator
+### 🚀 Orchestrator (start here)
 
-| Skill | Command | Description |
-|-------|---------|-------------|
-| **Full Analysis** | `/full-analysis` | ⭐ **Start here.** One command runs the entire pipeline automatically. Auto-detects size, selects strategy, saves checkpoints, produces final report. |
-
-### 📐 Phase 0 — Sizing
-
-| Skill | Command | Description | Context |
+| Skill | Command | What it does | Context |
 |-------|---------|-------------|---------|
-| **Preflight** | `/repo-preflight` | Bash-only size check (no file reads). Counts files/lines, assigns tier (Nano→Huge), generates ready-to-run task plan. | < 3k |
+| **Full Analysis** | `/full-analysis` | ⭐ One command runs the entire pipeline. Built-in size triage, paper auto-discovery, all phases in order, final report. | ~120k max |
 
-### 🗺️ Phase 1 — Architecture
+### 🗺️ Structural Analysis (Phase 1)
 
-| Skill | Command | Description | Context |
+| Skill | Command | What it does | Context |
 |-------|---------|-------------|---------|
-| **Repo Map** | `/repo-map` | L1: File tree with role summaries. Flags 🔥 novel / 📦 infra / ⚙️ boilerplate. Works on ANY size repo. | ~6k |
-| **Call Graph** | `/repo-callgraph` | L2: AST-extracted call graph with **real parameter types on edges**. Generates `classDiagram` + dependency graph. | ~8k |
-| **Interfaces** | `/repo-interfaces` | L3: Extracts all data contracts — ABC, Protocol, Pydantic, dataclass, TypedDict. Field types + constraints table. | ~8k |
+| **Repo Map** | `/repo-map` | L1: File tree with role labels. Flags 🔥 CORE / 📦 INFRA / ⚙️ BOILERPLATE. Works on any size. | ~6k |
+| **Call Graph** | `/repo-callgraph` | L2: AST call graph + **data contracts** (dataclass/Pydantic/ABC). Real parameter types on edges. | ~8k |
+| **Data Flow** | `/data-flow` | Traces how data transforms from entry to output. Mermaid `sequenceDiagram` + shape-change table. | ~9k |
 
-### 🌊 Phase 2 — Data Flow
+### 🎯 Innovation Analysis (Phase 2)
 
-| Skill | Command | Description | Context |
+| Skill | Command | What it does | Context |
 |-------|---------|-------------|---------|
-| **Data Flow** | `/data-flow` | Traces data shape transformations across the full pipeline. Generates Mermaid `sequenceDiagram` + type transformation table. | ~9k |
+| **Inno Scan** | `/inno-scan` | **Auto-finds the paper** (README → WebSearch → PDF → code-only). Maps contribution claims → functions via grep. | ~6.5k |
+| **Code Explain** | `/code-explain` | Single-function: Mermaid L3 flowchart + L4 line-by-line task↔code table with paper citations. | ~7k |
 
-### 🎯 Phase 3 — Innovation
+### 🔀 Utility
 
-| Skill | Command | Description | Context |
+| Skill | Command | What it does | Context |
 |-------|---------|-------------|---------|
-| **Inno Scan** | `/inno-scan` | Maps paper contribution claims → exact code functions via targeted grep. Never reads boilerplate. | ~6k |
+| **Repo Compare** | `/repo-compare` | Two-repo side-by-side: which system does what better, borrow recommendations. | ~8k |
 
-### 🔬 Phase 4 — Deep Dive
-
-| Skill | Command | Description | Context |
-|-------|---------|-------------|---------|
-| **Code Explain** | `/code-explain` | L6: Single-function deep dive. Mermaid flowchart (L3) + line-by-line task↔code table with paper citations (L4). | ~7k |
-
-### 🛠️ Utilities
-
-| Skill | Command | Description | Context |
-|-------|---------|-------------|---------|
-| **Repo Compare** | `/repo-compare` | Side-by-side comparison of two repos solving the same problem. Outputs "borrow X from A, Y from B" recommendation. | ~8k |
-| **Merge Analysis** | `/merge-analysis` | Combines partial `/inno-scan` results from Large/Huge repos into one final report. | ~5k |
+> **Merged into `/full-analysis`**: sizing/preflight (Step 0) and batch-merge logic (Phase 5) — no longer separate commands.  
+> **Merged into `/repo-callgraph`**: interface/data-contract extraction (formerly `/repo-interfaces`).
 
 ---
 
 ## 🔄 Full Pipeline
 
 ```
-/full-analysis (orchestrator)
+/full-analysis https://github.com/user/repo
 │
-├─── Phase 0: PREFLIGHT ──────────────────────────── always runs, < 3k tokens
-│    └── /repo-preflight
-│        Measure: file count, line count, module distribution
-│        Assign:  Nano / Small / Medium / Large / Huge
-│        Output:  task plan with exact commands to run
-│        Save:    00-preflight.md
+├─── Step 0: TRIAGE (built-in, < 30s) ──────────────── always
+│    Bash stat: count files/lines → assign tier Nano/Small/Medium/Large/Huge
+│    Check resume: skip already-completed phases if --resume
 │
-├─── Phase 1: ARCHITECTURE ───────────────────────── always runs
-│    ├── /repo-map         → file tree + role labels
-│    ├── /repo-callgraph   → AST call graph + class hierarchy + param types
-│    └── /repo-interfaces  → data contracts (ABC / Pydantic / dataclass)
-│        Save: 01-architecture.md, 02-callgraph.md, 03-interfaces.md
+├─── Step 1: ARCHITECTURE ───────────────────────────── always
+│    /repo-map         → file tree + 🔥/📦/⚙️ role labels
+│    /repo-callgraph   → AST call graph + data contracts (merged)
+│    Save: 01-architecture.md, 02-callgraph.md
 │
-├─── Phase 2: DATA FLOW ──────────────────────────── standard + deep mode
-│    └── /data-flow        → sequenceDiagram + type transformation table
-│        Save: 04-dataflow.md
+├─── Step 2: DATA FLOW ──────────────────────────────── standard + deep mode
+│    /data-flow        → sequenceDiagram + shape-change table
+│    Save: 03-dataflow.md
 │
-├─── Phase 3: INNOVATION SCAN ────────────────────── when paper URL provided
-│    └── /inno-scan        → paper claims → code function mapping
-│        [Large/Huge]      → auto-batched by module, saves partials
-│        Save: 05-innoscan.md (or 05-innoscan-partial-N.md)
+├─── Step 3: INNOVATION SCAN ────────────────────────── always
+│    /inno-scan        → [auto-find paper] → claims → function mapping
+│    Paper discovery:
+│      Level 1: grep README for arxiv/ACL/openreview links
+│      Level 2: WebSearch "[repo] arxiv paper"
+│      Level 3: user --paper URL/PDF, or code-only fallback
+│    [Large/Huge]: batch by module, merge inline
+│    Save: 04-innoscan.md
 │
-├─── Phase 4: DEEP DIVE ──────────────────────────── deep mode / user confirms
-│    └── /code-explain × N → L3 flowchart + L4 line-by-line table per function
-│        Save: 06-[funcname]-explain.md (one file per function)
+├─── Step 4: DEEP DIVE ──────────────────────────────── deep mode / confirmed
+│    /code-explain × N → per function: L3 flowchart + L4 task↔code table
+│    Save: 05-[funcname]-explain.md
 │
-└─── Phase 5: SYNTHESIS ──────────────────────────── always runs
-     └── /merge-analysis (if batched) + final report generation
-         Save: FINAL-report.md
+└─── Step 5: SYNTHESIS (built-in) ──────────────────── always
+     Read all checkpoints → generate REPORT.md
 ```
 
 ### Pipeline Modes
 
 ```
---mode quick     Phases: 0 → 1 → 3        ~30k tokens    ~5 min
---mode standard  Phases: 0 → 1 → 2 → 3   ~60k tokens    ~10 min  ← default
---mode deep      Phases: 0 → 1 → 2 → 3 → 4  ~120k+     ~20-30 min
+--mode quick     Steps: 0 → 1 → 3              ~25k tokens    ~5 min
+--mode standard  Steps: 0 → 1 → 2 → 3 → 5     ~50k tokens    ~10 min  ← default
+--mode deep      Steps: 0 → 1 → 2 → 3 → 4 → 5 ~100k+ tokens  ~20-30 min
 ```
 
 ### Tier-Based Strategy (auto-selected by Preflight)
@@ -323,12 +308,14 @@ Obsidian：打开 03.资料库/代码分析/[repo名]/FINAL-report.md（查看�
 
 ## 📚 Usage Recipes
 
-### Recipe 1: 快速了解一个陌生 repo（10 分钟）
+### Recipe 1: 快速了解一个陌生 repo（5 分钟）
 
 ```
-/repo-preflight https://github.com/user/repo
-/repo-map https://github.com/user/repo
-/inno-scan https://github.com/user/repo --paper [URL]
+# 只需 GitHub URL，论文自动发现
+/inno-scan https://github.com/user/repo
+
+# 或者一键全流程（快速模式）
+/full-analysis https://github.com/user/repo --mode quick
 ```
 
 ### Recipe 2: 标准完整分析（适合大多数论文）
@@ -353,29 +340,21 @@ Obsidian：打开 03.资料库/代码分析/[repo名]/FINAL-report.md（查看�
 /repo-compare https://github.com/A/repo1 https://github.com/B/repo2
 ```
 
-### Recipe 5: 大型 repo 多会话分析
+### Recipe 5: 大型 repo 多会话分析（断点续跑）
 
 ```bash
-# 会话 1：做体检和架构
-/repo-preflight https://github.com/user/repo --paper [URL]
-/repo-map https://github.com/user/repo
+# 会话 1：开始，自动中断在合适的 checkpoint
+/full-analysis https://github.com/user/repo --mode deep
 
-# 会话 2：第一批模块
-/inno-scan https://github.com/user/repo --paper [URL] --scope src/retrieval/ --save-partial 1
-
-# 会话 3：第二批模块
-/inno-scan https://github.com/user/repo --paper [URL] --scope src/generation/ --save-partial 2
-
-# 会话 4：合并 + 深度分析
-/merge-analysis repo-name
-/code-explain ... --func CoreFunction1
+# 后续会话：从上次断点继续
+/full-analysis https://github.com/user/repo --resume
 ```
 
-### Recipe 6: 只看接口和数据流（理解系统边界）
+### Recipe 6: 只看调用结构和数据契约
 
 ```
-/repo-interfaces https://github.com/user/repo
-/data-flow https://github.com/user/repo --entry main.py::run
+/repo-callgraph https://github.com/user/repo
+# 输出：调用图 + dataclass/Pydantic/ABC 接口定义（合并在一个文档）
 ```
 
 ---
@@ -383,36 +362,49 @@ Obsidian：打开 03.资料库/代码分析/[repo名]/FINAL-report.md（查看�
 ## 🎯 How Innovation Localization Works
 
 ```
-Paper Abstract / Contributions
+GitHub URL only → /inno-scan auto-starts:
   │
-  ▼ Extract N innovation claims + keywords
-  
-  C1: "multi-perspective question asking"
-      keywords: [perspective, question, asking, simulate, editor]
-  C2: "hierarchical outline generation"
-      keywords: [outline, hierarchical, generate, structure]
-  
-Codebase Scan
+  ├─ Level 1: grep README.md for arxiv.org / aclanthology / openreview links
+  │           → Found: https://arxiv.org/abs/2510.10114
   │
+  ├─ Level 2 (if Level 1 fails): WebSearch "LinearRAG arxiv paper"
+  │           → Returns paper title + URL
+  │
+  └─ Level 3 (if all else fails): code-only mode, inference from code patterns
+
+Paper fetch → WebFetch arxiv.org/html/[id] (HTML richer than abstract)
+
+Extract contribution claims:
+  C1: "relation-free Tri-Graph using NER + semantic linking"
+      keywords: [relation_free, NER, entity, semantic, graph]
+  C2: "linear complexity, adjacent passage chain"
+      keywords: [adjacent, passage, chain, linear, index]
+
+Codebase Scan:
   ▼ Filter boilerplate (references/BOILERPLATE_PATTERNS.md)
-    Skip: train.py, evaluate.py, logger.py, config.py, utils/, tests/...
+    Skip: run.py, evaluate.py, utils.py, config.py
   
-  ▼ Targeted grep (never reads full files)
-    grep -rn "perspective|question|simulate" *.py
+  ▼ Targeted grep (never reads full files, ~300 tokens)
+    grep -rn "adjacent|passage.*chain|NER|entity.*extract" src/ --include="*.py"
+  
+  ▼ Read only hit function bodies (~50 lines × 5 functions)
   
   ▼ Score each hit (references/INNOVATION_SCORING.md)
     +3: function name matches keyword
     +3: docstring cites paper section
-    +2: contains unique algorithmic logic
+    +2: contains unique algorithmic logic (custom loop/math)
     +1: called by other novel functions
     −2: only wraps standard library APIs
-    −3: matches boilerplate pattern
+    −1: same file as boilerplate
   
-Paper ↔ Code Mapping Table
-  C1 → knowledge_curation.py::QuestionAsker.ask()    ⭐⭐⭐⭐⭐
-  C2 → article_generation.py::OutlineGenerator.gen() ⭐⭐⭐⭐
+Paper ↔ Code Mapping Table:
+  C1 → LinearRAG.index() + SpacyNER.batch_ner()          ⭐⭐⭐⭐⭐
+  C2 → LinearRAG.add_adjacent_passage_edges()             ⭐⭐⭐⭐⭐
+  C3 → LinearRAG.calculate_entity_scores()               ⭐⭐⭐⭐⭐
+  C4 → LinearRAG.calculate_entity_scores_vectorized()    ⭐⭐⭐⭐⭐
+  C5 → LinearRAG.calculate_passage_scores() + run_ppr()  ⭐⭐⭐⭐
 
-"Reading these 2 functions = understanding 80% of the paper's contribution."
+"Reading these 5 functions = understanding 85% of the paper's contribution."
 ```
 
 ---
@@ -423,13 +415,15 @@ A large ML repo can have 50k–500k lines of code — far beyond any LLM's conte
 
 | Skill | What it reads | What it skips | Tokens |
 |-------|--------------|---------------|--------|
-| `/repo-preflight` | File tree only (metadata) | Every file's content | < 3k |
+| `/full-analysis` Step 0 | `find`/`wc` output (metadata only) | Every file's content | < 1k |
 | `/repo-map` | README + entry file (60 lines) | All other content | ~6k |
-| `/repo-callgraph` | AST signatures (compressed) | Function bodies | ~8k |
-| `/inno-scan` | Grep hits (50-line snippets) | All boilerplate files | ~6k |
+| `/repo-callgraph` | AST signatures + interfaces | Function bodies | ~8k |
+| `/inno-scan` | README grep + paper abstract + grep hits | All boilerplate files | ~6.5k |
 | `/code-explain` | 1 function (20–150 lines) | The rest of the repo | ~7k |
 
 **Why this works**: AST analysis extracts signatures from 3 files of 1000 lines each into ~200 lines of structured data. That's 15× compression before Claude even starts.
+
+**Paper discovery is essentially free**: README grep + WebSearch ≈ 700 tokens. In most cases the paper is found before any code is read.
 
 ---
 
@@ -443,17 +437,16 @@ RepoStrata/
 ├── LICENSE
 ├── install.sh                    ← one-line installer
 │
-├── skills/
+├── skills/                       ← 7 skills (trimmed from 10)
 │   ├── full-analysis/SKILL.md    ← ⭐ orchestrator (start here)
-│   ├── repo-preflight/SKILL.md   ← Phase 0: sizing
-│   ├── repo-map/SKILL.md         ← Phase 1a: architecture
-│   ├── repo-callgraph/SKILL.md   ← Phase 1b: AST call graph
-│   ├── repo-interfaces/SKILL.md  ← Phase 1c: data contracts
-│   ├── data-flow/SKILL.md        ← Phase 2: data flow
-│   ├── inno-scan/SKILL.md        ← Phase 3: innovation scan ★ core
-│   ├── code-explain/SKILL.md     ← Phase 4: deep dive
-│   ├── repo-compare/SKILL.md     ← utility: comparison
-│   └── merge-analysis/SKILL.md   ← utility: merge batches
+│   │                                 includes: triage + batch-merge (built-in)
+│   ├── repo-map/SKILL.md         ← Phase 1a: L1 file tree + role labels
+│   ├── repo-callgraph/SKILL.md   ← Phase 1b: AST call graph + data contracts
+│   │                                 includes: interface extraction (merged)
+│   ├── data-flow/SKILL.md        ← Phase 2: data transformation pipeline
+│   ├── inno-scan/SKILL.md        ← Phase 3: paper auto-discovery + innovation map ★
+│   ├── code-explain/SKILL.md     ← Phase 4: L3 flowchart + L4 task↔code table
+│   └── repo-compare/SKILL.md     ← utility: two-repo comparison
 │
 ├── references/
 │   ├── BOILERPLATE_PATTERNS.md   ← what to skip
@@ -461,18 +454,20 @@ RepoStrata/
 │   └── OUTPUT_TEMPLATES.md       ← Mermaid + table templates
 │
 └── examples/
-    └── storm-inno-scan.md        ← real output: stanford-oval/storm
+    ├── linearrag-full-analysis.md  ← 🆕 real output: DEEP-PolyU/LinearRAG (ICLR'26)
+    └── storm-inno-scan.md          ← real output: stanford-oval/storm
 ```
 
 ---
 
 ## 🔬 Tested Repositories
 
-| Repo | Paper | Domain | Tier |
-|------|-------|--------|------|
-| [stanford-oval/storm](https://github.com/stanford-oval/storm) | [arXiv:2402.14207](https://arxiv.org/abs/2402.14207) | LLM Knowledge Curation | 🟡 Small |
-| [OSU-NLP-Group/HippoRAG](https://github.com/OSU-NLP-Group/HippoRAG) | [arXiv:2405.14831](https://arxiv.org/abs/2405.14831) | Graph-based RAG | 🟡 Small |
-| [FasterDecoding/Medusa](https://github.com/FasterDecoding/Medusa) | [arXiv:2401.10774](https://arxiv.org/abs/2401.10774) | LLM Inference | 🟠 Medium |
+| Repo | Paper | Domain | Tier | Paper Discovery |
+|------|-------|--------|------|----------------|
+| [DEEP-PolyU/LinearRAG](https://github.com/DEEP-PolyU/LinearRAG) | [arXiv:2510.10114](https://arxiv.org/abs/2510.10114) | Graph RAG | 🟢 Nano | README link |
+| [stanford-oval/storm](https://github.com/stanford-oval/storm) | [arXiv:2402.14207](https://arxiv.org/abs/2402.14207) | LLM Knowledge Curation | 🟡 Small | README link |
+| [OSU-NLP-Group/HippoRAG](https://github.com/OSU-NLP-Group/HippoRAG) | [arXiv:2405.14831](https://arxiv.org/abs/2405.14831) | Graph-based RAG | 🟡 Small | WebSearch |
+| [FasterDecoding/Medusa](https://github.com/FasterDecoding/Medusa) | [arXiv:2401.10774](https://arxiv.org/abs/2401.10774) | LLM Inference | 🟠 Medium | WebSearch |
 
 ---
 
@@ -494,18 +489,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### RepoStrata 是什么？
 
-10 个 Claude Code Skill 组成的代码分析套件，能将任意 GitHub 仓库分层剖析。
+**7 个 Claude Code Skill** 组成的代码分析套件，能将任意 GitHub 仓库分层剖析。只给 GitHub URL，自动找论文，自动定位创新代码，生成逐行"为什么"对照表。
 
 **核心能力**：
-- 🔍 **创新点定位**：自动将论文贡献声明映射到代码中的具体函数
-- 🧬 **AST 静态分析**：用 Python `ast` 模块提取真实参数类型，而非猜测
-- 📏 **智能分级**：先量体裁衣（体检），再决定策略，永不超出上下文限制
-- 🔄 **断点续跑**：大型仓库分多会话完成，每步结果自动存入 vault
+- 📄 **论文自动发现**：README 扫描 → Web 搜索 → PDF 上传 → 无论文代码推断（三级降级）
+- 🔍 **创新点定位**：自动将论文贡献声明映射到代码中的具体函数（Grep，非全文读取）
+- 🧬 **AST 静态分析**：用 Python `ast` 模块提取真实参数类型和调用关系
+- 📏 **智能规模分级**：先统计代码量，按 Nano/Small/Medium/Large/Huge 选择策略
+- 🔄 **断点续跑**：大型仓库分多会话完成，每阶段自动保存检查点
 
-### 一键启动
+### 一键启动（只需 GitHub URL）
 
 ```
-/full-analysis https://github.com/stanford-oval/storm --paper https://arxiv.org/abs/2402.14207
+# 最简用法：自动发现论文，自动分析
+/full-analysis https://github.com/DEEP-PolyU/LinearRAG
+
+# 或直接定位创新点
+/inno-scan https://github.com/DEEP-PolyU/LinearRAG
 ```
 
 ### 安装方式
